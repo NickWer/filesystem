@@ -13,6 +13,7 @@
         }
     ],
     "require": {
+        "doctrine/cache": "^1.4",
         "guzzlehttp/psr7": "^1.2",
         "league/flysystem": "^1.0",
         "miljar/php-exif": "^0.5",
