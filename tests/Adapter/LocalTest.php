@@ -49,9 +49,6 @@ class LocalTest extends FilesystemTestCase
         $this->assertSame('koala.css', $update['path']);
         $this->assertSame('.drop-bear {}', $update['contents']);
         $this->assertSame('text/css', $update['mimetype']);
-
-        $update = $local->update('koala.css.typo', '.drop-bear {}', $config);
-        $this->assertFalse($update);
     }
 
     public function testDelete()
