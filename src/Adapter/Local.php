@@ -4,10 +4,10 @@ namespace Bolt\Filesystem\Adapter;
 
 use Bolt\Filesystem\Exception\DirectoryCreationException;
 use Bolt\Filesystem\Exception\IncludeFileException;
+use Bolt\Filesystem\Exception\IOException;
 use Bolt\Filesystem\SupportsIncludeFileInterface;
 use League\Flysystem\Adapter\Local as LocalBase;
 use League\Flysystem\Config;
-use League\Flysystem\Util;
 
 class Local extends LocalBase implements SupportsIncludeFileInterface
 {
@@ -30,22 +30,64 @@ class Local extends LocalBase implements SupportsIncludeFileInterface
     }
 
     /**
+     * @inheritdoc
+     */
+    public function write($path, $contents, Config $config)
+    {
+        return $this->dumpContents('write', $path, $contents, $config);
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function writeStream($path, $resource, Config $config)
+    {
+        return $this->dumpContents('writeStream', $path, $resource, $config);
+    }
+
+    /**
      * {@inheritdoc}
      */
     public function update($path, $contents, Config $config)
     {
-        $location = $this->applyPathPrefix($path);
-        $mimetype = Util::guessMimeType($path, $contents);
+        return $this->dumpContents('update', $path, $contents, $config);
+    }
 
-        if (!is_writable($location)) {
-            return false;
+    /**
+     * {@inheritdoc}
+     */
+    public function updateStream($path, $resource, Config $config)
+    {
+        return $this->writeStream($path, $resource, $config);
+    }
+
+    /**
+     * Persist data to a file.
+     *
+     * @param string          $output
+     * @param string          $path
+     * @param string|resource $contents
+     * @param Config          $config
+     */
+    private function dumpContents($output, $path, $contents, Config $config)
+    {
+        set_error_handler(
+            function ($errno, $errstr) use ($path) {
+                throw new IOException($errstr, $path, $errno);
+            }
+        );
+
+        if ($output === 'write') {
+            $result = parent::write($path, $contents, $config);
+        } elseif ($output === 'writeStream') {
+            $result = parent::writeStream($path, $contents, $config);
+        } elseif ($output === 'update') {
+            $result = parent::update($path, $contents, $config);
         }
 
-        if (($size = file_put_contents($location, $contents, $this->writeFlags)) === false) {
-            return false;
-        }
+        restore_error_handler();
 
-        return compact('path', 'size', 'contents', 'mimetype');
+        return $result;
     }
 
     /**
