@@ -2,6 +2,7 @@
 
 namespace Bolt\Filesystem\Iterator;
 
+use Bolt\Filesystem\Exception\FileNotFoundException;
 use Bolt\Filesystem\FilesystemInterface;
 use RecursiveIteratorIterator;
 use Webmozart\Glob\Glob;
@@ -32,8 +33,13 @@ class GlobIterator extends GlobFilterIterator
         }
 
         if (!Glob::isDynamic($glob)) {
-            // If the glob is a file path, return that path.
-            $innerIterator = new \ArrayIterator([$glob => $filesystem->get($glob)]);
+            // If the glob is a file path, return that path if it exists.
+            try {
+                $arr[$glob] = $filesystem->get($glob);
+            } catch (FileNotFoundException $e) {
+                $arr = [];
+            }
+            $innerIterator = new \ArrayIterator($arr);
         } else {
             $basePath = Glob::getBasePath($glob);
 
