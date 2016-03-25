@@ -2,6 +2,8 @@
 
 namespace Bolt\Filesystem;
 
+use Bolt\Filesystem\Adapter\DefinesProfileInterface;
+use Bolt\Filesystem\Capability;
 use Bolt\Filesystem\Exception as Ex;
 use Bolt\Filesystem\Handler;
 use Bolt\Filesystem\Handler\FileInterface;
@@ -27,6 +29,8 @@ class Filesystem implements FilesystemInterface, MountPointAwareInterface
 
     /** @var Flysystem\AdapterInterface */
     protected $adapter;
+    /** @var Capability\Profile */
+    protected $profile;
 
     /**
      * Constructor.
@@ -38,6 +42,10 @@ class Filesystem implements FilesystemInterface, MountPointAwareInterface
     {
         $this->adapter = $adapter;
         $this->setConfig($config);
+
+        $this->profile = $adapter instanceof DefinesProfileInterface ?
+            $adapter->getProfile() :
+            new Capability\Profile($this->adapter);
     }
 
     /**
@@ -48,6 +56,11 @@ class Filesystem implements FilesystemInterface, MountPointAwareInterface
     public function getAdapter()
     {
         return $this->adapter;
+    }
+
+    public function getProfile()
+    {
+        return $this->profile;
     }
 
     /**
@@ -63,6 +76,28 @@ class Filesystem implements FilesystemInterface, MountPointAwareInterface
     {
         try {
             return (bool) $this->getAdapter()->has($path);
+        } catch (Exception $e) {
+            throw $this->handleEx($e, $path);
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function hasDir($path)
+    {
+        $path = $this->normalizePath($path);
+        return $this->doHasDir($path);
+    }
+
+    private function doHasDir($path)
+    {
+        if (!$this->profile->supportsDirs()) {
+            return true;
+        }
+
+        try {
+            return (bool) $this->getAdapter()->hasDir($path);
         } catch (Exception $e) {
             throw $this->handleEx($e, $path);
         }
@@ -414,6 +449,10 @@ class Filesystem implements FilesystemInterface, MountPointAwareInterface
 
     private function doCreateDir($path, Flysystem\Config $config)
     {
+        if (!$this->profile->supportsDirs()) {
+            return;// TODO Write empty file?
+        }
+
         try {
             $result = (bool) $this->getAdapter()->createDir($path, $config);
         } catch (Exception $e) {
@@ -447,22 +486,28 @@ class Filesystem implements FilesystemInterface, MountPointAwareInterface
 
     private function doMirror($originDir, $targetDir, Flysystem\Config $config)
     {
-        if ($config->get('delete', true) && $this->doHas($targetDir)) {
+        if ($config->get('delete', true)) {
             $it = $this->getIterator($targetDir, \RecursiveIteratorIterator::CHILD_FIRST);
             foreach ($it as $handler) {
                 /** @var HandlerInterface $handler */
                 $origin = str_replace($targetDir, $originDir, $handler->getPath());
-                if (!$this->doHas($origin)) {
-                    if ($handler->isDir()) {
-                        $this->doDeleteDir($handler->getPath());
-                    } else {
-                        $this->doDelete($handler->getPath());
-                    }
+
+                if ($handler instanceof Handler\DirectoryInterface && !$this->profile->supportsDirs()) {
+                    // Directories are fake, so skip
+                    continue;
+                }
+                if ($this->doHas($origin)) { //maybe merge with above. always false for unsupported dirs
+                    continue;
+                }
+                if ($handler instanceof Handler\DirectoryInterface) {
+                    $this->doDeleteDir($handler->getPath());
+                } else {
+                    $this->doDelete($handler->getPath());
                 }
             }
         }
 
-        if ($this->doHas($originDir)) {
+        if ($this->doHasDir($originDir)) {
             $this->doCreateDir($targetDir, $config);
         }
 
@@ -470,7 +515,7 @@ class Filesystem implements FilesystemInterface, MountPointAwareInterface
 
         foreach ($it as $handler) {
             $target = str_replace($originDir, $targetDir, $handler->getPath());
-            if ($handler->isDir()) {
+            if ($handler instanceof Handler\DirectoryInterface) {
                 $this->doCreateDir($target, $config);
             } else {
                 $this->doCopy($handler->getPath(), $target, $config->get('override'));
@@ -495,7 +540,6 @@ class Filesystem implements FilesystemInterface, MountPointAwareInterface
             if ($path === '') {
                 $type = 'dir'; // Shortcut for root path
             } else {
-                $this->assertPresent($path);
                 $type = $this->doGetType($path);
             }
             $handler = $this->getHandlerForType($path, $type);
@@ -551,15 +595,26 @@ class Filesystem implements FilesystemInterface, MountPointAwareInterface
     public function getType($path)
     {
         $path = $this->normalizePath($path);
-        $this->assertPresent($path);
-
         return $this->doGetType($path);
     }
 
     private function doGetType($path)
     {
+        $adapter = $this->getAdapter();
+
+        if (!$this->doHas($path)) {
+            if (!$this->profile->supportsDirs()) {
+                // This is the only case where we cannot assume the
+                // directory exists, else the getMetadata call will fail.
+                throw new Ex\UnableToDetermineTypeException($path, get_class($adapter));
+            }
+            if (!$this->doHasDir($path)) {
+                throw new Ex\FileNotFoundException($path);
+            }
+        }
+
         try {
-            $metadata = $this->getAdapter()->getMetadata($path);
+            $metadata = $adapter->getMetadata($path);
         } catch (Exception $e) {
             throw $this->handleEx($e, $path);
         }
@@ -762,18 +817,23 @@ class Filesystem implements FilesystemInterface, MountPointAwareInterface
      */
     public function includeFile($path, $once = true)
     {
-        $adapter = $this->getAdapter();
-
-        if (!$adapter instanceof Capability\IncludeFile) {
+        if (!$this->profile->supportsIncludeFile()) {
             throw new Ex\NotSupportedException('Filesystem does not support including PHP files.', $path);
         }
-        $this->assertPresent($path);
 
-        return $adapter->includeFile($path, $once);
+        $path = $this->normalizePath($path);
+
+        //$this->assertPresent($path);
+
+        return $this->getAdapter()->includeFile($path, $once);
     }
 
     /**
-     * {@inheritdoc}
+     * Assert file (or directory, if supported) is present.
+     *
+     * @param string $path
+     *
+     * @throws Ex\FileNotFoundException
      */
     protected function assertPresent($path)
     {
@@ -783,7 +843,11 @@ class Filesystem implements FilesystemInterface, MountPointAwareInterface
     }
 
     /**
-     * {@inheritdoc}
+     * Assert file (or directory, if supported) is absent.
+     *
+     * @param string $path
+     *
+     * @throws Ex\FileExistsException
      */
     protected function assertAbsent($path)
     {

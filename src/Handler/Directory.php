@@ -20,6 +20,14 @@ class Directory extends BaseHandler implements DirectoryInterface
     /**
      * {@inheritdoc}
      */
+    public function exists()
+    {
+        return $this->filesystem->hasDir($this->path);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     public function create($config = [])
     {
         $this->filesystem->createDir($this->path, $config);

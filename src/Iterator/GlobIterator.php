@@ -13,7 +13,7 @@ use Webmozart\Glob\Iterator\GlobFilterIterator;
  *
  * @author Carson Full <carsonfull@gmail.com>
  */
-class GlobIterator extends GlobFilterIterator
+class GlobIterator extends \IteratorIterator
 {
     /**
      * Constructor.
@@ -32,27 +32,34 @@ class GlobIterator extends GlobFilterIterator
             $glob = '/' . ltrim($glob, '/');
         }
 
+        $basePath = Glob::getBasePath($glob, $flags);
+
         if (!Glob::isDynamic($glob)) {
             // If the glob is a file path, return that path if it exists.
             try {
-                $arr[$glob] = $filesystem->get($glob);
+                $file = $filesystem->get($glob);
+                $innerIterator = new \ArrayIterator([$glob => $file]);
             } catch (FileNotFoundException $e) {
-                $arr = [];
+                $innerIterator = new \EmptyIterator(); 
             }
-            $innerIterator = new \ArrayIterator($arr);
         } else {
             $basePath = Glob::getBasePath($glob);
 
-            $innerIterator = new RecursiveIteratorIterator(
-                new RecursiveDirectoryIterator(
-                    $filesystem,
-                    $basePath,
-                    RecursiveDirectoryIterator::KEY_FOR_GLOB
+            $innerIterator = new GlobFilterIterator(
+                $glob,
+                new RecursiveIteratorIterator(
+                    new RecursiveDirectoryIterator(
+                        $filesystem,
+                        $basePath,
+                        RecursiveDirectoryIterator::KEY_FOR_GLOB
+                    ),
+                    RecursiveIteratorIterator::SELF_FIRST
                 ),
-                RecursiveIteratorIterator::SELF_FIRST
+                GlobFilterIterator::FILTER_KEY,
+                $flags
             );
         }
 
-        parent::__construct($glob, $innerIterator, static::FILTER_KEY, $flags);
+        parent::__construct($innerIterator);
     }
 }

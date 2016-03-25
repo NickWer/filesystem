@@ -116,16 +116,6 @@ abstract class BaseHandler implements HandlerInterface
     }
 
     /**
-     * Returns whether the entry exists.
-     *
-     * @return bool
-     */
-    public function exists()
-    {
-        return $this->filesystem->has($this->path);
-    }
-
-    /**
      * {@inheritdoc}
      */
     public function isDir()

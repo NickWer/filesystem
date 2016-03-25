@@ -1,8 +1,10 @@
 <?php
 namespace Bolt\Filesystem;
 
+use Bolt\Filesystem\Capability;
 use Bolt\Filesystem\Exception\InvalidArgumentException;
 use Bolt\Filesystem\Exception\LogicException;
+use Bolt\Filesystem\Handler\DirectoryInterface;
 use Bolt\Filesystem\Handler\FileInterface;
 use Bolt\Filesystem\Handler\HandlerInterface;
 
@@ -101,6 +103,14 @@ class Manager implements AggregateFilesystemInterface, FilesystemInterface
     /**
      * {@inheritdoc}
      */
+    public function getProfile()
+    {
+        // TODO All capabilities?
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     public function listContents($directory = '', $recursive = false)
     {
         list($mountPoint, $directory) = $this->parsePath($directory);
@@ -150,6 +160,16 @@ class Manager implements AggregateFilesystemInterface, FilesystemInterface
         list($mountPoint, $path) = $this->parsePath($path);
 
         return $this->getFilesystem($mountPoint)->has($path);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function hasDir($path)
+    {
+        list($mountPoint, $path) = $this->parsePath($path);
+
+        return $this->getFilesystem($mountPoint)->hasDir($path);
     }
 
     /**
@@ -328,23 +348,27 @@ class Manager implements AggregateFilesystemInterface, FilesystemInterface
         $fsOrigin = $this->getFilesystem($fsOrigin);
         $fsTarget = $this->getFilesystem($fsTarget);
 
-        if ($config['delete'] && $fsTarget->has($targetDir)) {
+        if ($config['delete']) {
             $it = new Iterator\RecursiveDirectoryIterator($fsTarget, $targetDir);
             $it = new \RecursiveIteratorIterator($it, \RecursiveIteratorIterator::CHILD_FIRST);
             foreach ($it as $handler) {
                 /** @var HandlerInterface $handler */
                 $origin = str_replace($targetDir, $originDir, $handler->getPath());
-                if (!$fsOrigin->has($origin)) {
-                    if ($handler->isDir()) {
-                        $fsTarget->deleteDir($origin);
-                    } else {
-                        $fsTarget->delete($origin);
-                    }
+                if ($handler instanceof DirectoryInterface && !$fsOrigin->getProfile()->supportsDirs()) {
+                    continue;
+                }
+                if ($fsOrigin->has($origin)) {
+                    continue;
+                }
+                if ($handler instanceof DirectoryInterface) {
+                    $fsTarget->deleteDir($origin);
+                } else {
+                    $fsTarget->delete($origin);
                 }
             }
         }
 
-        if ($fsOrigin->has($originDir)) {
+        if ($fsOrigin->hasDir($originDir)) {
             $fsTarget->createDir($targetDir, $config);
         }
 
@@ -352,7 +376,7 @@ class Manager implements AggregateFilesystemInterface, FilesystemInterface
         $it = new \RecursiveIteratorIterator($it, \RecursiveIteratorIterator::SELF_FIRST);
         foreach ($it as $handler) {
             $target = str_replace($originDir, $targetDir, $handler->getPath());
-            if ($handler->isDir()) {
+            if ($handler instanceof DirectoryInterface) {
                 $fsTarget->createDir($target, $config);
             } else {
                 $this->doCopy($fsOrigin, $fsTarget, $handler->getPath(), $target, $config['override']);
@@ -463,6 +487,20 @@ class Manager implements AggregateFilesystemInterface, FilesystemInterface
         list($mountPoint, $path) = $this->parsePath($path);
 
         return $this->getFilesystem($mountPoint)->includeFile($path, $once);
+    }
+
+    protected function parseFile($path)
+    {
+        list($mountPoint, $path) = $this->parsePath($path);
+
+        return $this->getFilesystem($mountPoint)->getFile($path);
+    }
+
+    protected function parseDir($path)
+    {
+        list($mountPoint, $path) = $this->parsePath($path);
+
+        return $this->getFilesystem($mountPoint)->getDir($path);
     }
 
     /**

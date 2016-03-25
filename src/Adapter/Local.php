@@ -10,7 +10,7 @@ use League\Flysystem\Config;
 use League\Flysystem\Util;
 use Webmozart\PathUtil\Path;
 
-class Local extends LocalBase implements Capability\IncludeFile
+class Local extends LocalBase implements DefinesProfileInterface, Capability\Directories, Capability\IncludeFile
 {
     /**
      * {@inheritdoc}
@@ -19,6 +19,14 @@ class Local extends LocalBase implements Capability\IncludeFile
     {
         $root = Path::canonicalize($root);
         parent::__construct($root, $writeFlags, $linkHandling, $permissions);
+    }
+
+    public function getProfile()
+    {
+        return (new Capability\Profile($this))
+            ->enableDirs()
+            ->enableIncludeFile()
+        ;
     }
 
     /**
@@ -37,6 +45,16 @@ class Local extends LocalBase implements Capability\IncludeFile
         }
 
         return realpath($root);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function hasDir($path)
+    {
+        $location = $this->applyPathPrefix($path);
+
+        return is_dir($location);
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace Bolt\Filesystem;
 
+use Bolt\Filesystem\Adapter\DefinesProfileInterface;
 use Bolt\Filesystem\Exception\FileExistsException;
 use Bolt\Filesystem\Exception\FileNotFoundException;
 use Bolt\Filesystem\Exception\InvalidArgumentException;
@@ -19,7 +20,7 @@ use Psr\Http\Message\StreamInterface;
  *
  * @author Carson Full <carsonfull@gmail.com>
  */
-interface FilesystemInterface extends Capability\IncludeFile
+interface FilesystemInterface extends DefinesProfileInterface, Capability\Directories, Capability\IncludeFile
 {
     /**
      * Check whether a file exists.
@@ -29,6 +30,19 @@ interface FilesystemInterface extends Capability\IncludeFile
      * @return bool
      */
     public function has($path);
+
+    /**
+     * Check whether a directory exists.
+     *
+     * Note:
+     *  - Directories are automatically created as needed for file paths.
+     *  - Adapters not supporting directories will blindly assume they exist.
+     *
+     * @param string $path The path to the directory.
+     *
+     * @return bool
+     */
+    public function hasDir($path);
 
     /**
      * Read a file.

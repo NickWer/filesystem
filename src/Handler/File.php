@@ -12,6 +12,14 @@ class File extends BaseHandler implements FileInterface
     /**
      * {@inheritdoc}
      */
+    public function exists()
+    {
+        return $this->filesystem->has($this->path);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     public function read()
     {
         return $this->filesystem->read($this->path);
