@@ -823,7 +823,7 @@ class Filesystem implements FilesystemInterface, MountPointAwareInterface
 
         $path = $this->normalizePath($path);
 
-        //$this->assertPresent($path);
+        $this->assertPresent($path);
 
         return $this->getAdapter()->includeFile($path, $once);
     }
