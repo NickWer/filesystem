@@ -818,7 +818,7 @@ class Filesystem implements FilesystemInterface, MountPointAwareInterface
     public function includeFile($path, $once = true)
     {
         if (!$this->profile->supportsIncludeFile()) {
-            throw new Ex\NotSupportedException('Filesystem does not support including PHP files.', $path);
+            throw new Ex\NotSupportedException('Filesystem does not support including PHP files.');
         }
 
         $path = $this->normalizePath($path);
