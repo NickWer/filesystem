@@ -3,7 +3,6 @@
 namespace Bolt\Filesystem\Tests\Handler\Image;
 
 use Bolt\Filesystem\Adapter\Local;
-use Bolt\Filesystem\Exception\IOException;
 use Bolt\Filesystem\Filesystem;
 use Bolt\Filesystem\Handler\Image;
 use PHPUnit\Framework\TestCase;
@@ -67,9 +66,12 @@ class InfoTest extends TestCase
         $this->assertSame(0.0, $info->getAspectRatio());
     }
 
+    /**
+     * @expectedException \Bolt\Filesystem\Exception\IOException
+     * @expectedExceptionMessage Failed to get image data from file
+     */
     public function testCreateFromFileFail()
     {
-        $this->setExpectedException(IOException::class, 'Failed to get image data from file');
         Image\Info::createFromFile('drop-bear.jpg');
     }
 
@@ -108,9 +110,12 @@ class InfoTest extends TestCase
         $this->assertSame(0.0, $info->getAspectRatio());
     }
 
+    /**
+     * @expectedException \Bolt\Filesystem\Exception\IOException
+     * @expectedExceptionMessage Failed to get image data from string
+     */
     public function testCreateFromStringFail()
     {
-        $this->setExpectedException(IOException::class, 'Failed to get image data from string');
         Image\Info::createFromString('drop-bear.jpg');
     }
 
