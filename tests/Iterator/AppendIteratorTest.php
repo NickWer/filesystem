@@ -3,8 +3,9 @@
 namespace Bolt\Filesystem\Tests\Iterator;
 
 use Bolt\Filesystem\Iterator\AppendIterator;
+use PHPUnit\Framework\TestCase;
 
-class AppendIteratorTest extends \PHPUnit_Framework_TestCase
+class AppendIteratorTest extends TestCase
 {
     /**
      * This asserts that we can identify the bug.

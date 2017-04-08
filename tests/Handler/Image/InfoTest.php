@@ -6,13 +6,14 @@ use Bolt\Filesystem\Adapter\Local;
 use Bolt\Filesystem\Exception\IOException;
 use Bolt\Filesystem\Filesystem;
 use Bolt\Filesystem\Handler\Image;
+use PHPUnit\Framework\TestCase;
 
 /**
  * Tests for Bolt\Filesystem\Image\Info
  *
  * @author Gawain Lynch <gawain.lynch@gmail.com>
  */
-class InfoTest extends \PHPUnit_Framework_TestCase
+class InfoTest extends TestCase
 {
     /** @var Filesystem */
     protected $filesystem;

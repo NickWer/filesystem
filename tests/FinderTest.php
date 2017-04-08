@@ -3,7 +3,6 @@
 namespace Bolt\Filesystem\Tests;
 
 use Bolt\Filesystem\Adapter\Local;
-use Bolt\Filesystem\Exception\LogicException;
 use Bolt\Filesystem\Filesystem;
 use Bolt\Filesystem\FilesystemInterface;
 use Bolt\Filesystem\Finder;
@@ -818,8 +817,8 @@ class FinderTest extends IteratorTestCase
 //                 $this->fail('Finder should throw an exception when opening a non-readable directory.');
 //             } catch (\Exception $e) {
 //                 $expectedExceptionClass = 'Symfony\\Component\\Finder\\Exception\\AccessDeniedException';
-//                 if ($e instanceof \PHPUnit_Framework_ExpectationFailedException) {
-//                     $this->fail(sprintf("Expected exception:\n%s\nGot:\n%s\nWith comparison failure:\n%s", $expectedExceptionClass, 'PHPUnit_Framework_ExpectationFailedException', $e->getComparisonFailure()->getExpectedAsString()));
+//                 if ($e instanceof \PHPUnit\Framework\ExpectationFailedException) {
+//                     $this->fail(sprintf("Expected exception:\n%s\nGot:\n%s\nWith comparison failure:\n%s", $expectedExceptionClass, 'PHPUnit\Framework\ExpectationFailedException', $e->getComparisonFailure()->getExpectedAsString()));
 //                 }
 
 //                 $this->assertInstanceOf($expectedExceptionClass, $e);
